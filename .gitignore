@@ -1,0 +1,8 @@
+# ignore ALL .log files
+# ignore ALL files in ANY directory named temp
+tmp_train_feedbacks/
+figures/
+**/__pycache__/
+.vscode/
+# All name folders, and files and folders in any name folder
+sbatch/

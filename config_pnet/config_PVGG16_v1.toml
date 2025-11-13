@@ -1,0 +1,34 @@
+# network name
+name = "pvgg16v1"
+
+# imports for predictors
+imports = [
+"from torch.nn import Sequential, ReLU, Linear",
+]
+
+# uses PCoderN instead of PCoder
+gradient_scaling = true
+
+# uses shared hyperparameters across all PCoders
+# it overwrites the hyperparameter values per PCoder and uses the default value
+# or the values provided for the first PCoder
+shared_hyperparameters = false
+
+# input size [channels, height, width]
+input_size = [3, 224, 224]
+
+# pcoders
+[[pcoders]]
+module = "classifier[0]"
+predictor = "Linear(in_features=4096, out_features=25088, bias=True)"
+hyperparameters = {feedforward=0.2, feedback=0.05, pc=0.01}
+
+[[pcoders]]
+module = "classifier[3]"
+predictor = "Linear(in_features=4096, out_features=4096, bias=True)"
+hyperparameters = {feedforward=0.4, feedback=0.1, pc=0.01}
+
+[[pcoders]]
+module = "classifier[6]"
+predictor = "Linear(in_features=1000, out_features=4096, bias=True)"
+hyperparameters = {feedforward=0.4, feedback=0.1, pc=0.01}

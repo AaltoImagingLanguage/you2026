@@ -1,0 +1,44 @@
+# This is an example TOML config for training the feedback weights
+TITLE = "Training Feedback Weights"
+
+
+RANDOM_SEED = 42                                                         # random seed for training
+CUDNN_DETERMINISTIC = false
+CUDNN_BENCHMARK = true
+
+GPU_TO_USE = 0
+
+IMAGENET_DIR ='../data/wordsets_1000cat/'
+
+###  Tensorbaord ###
+START_EPOCH = 1                                                           # epoch from which the training starts (especially for tensorboard)
+SAVE_DIR='./tmp_train_feedbacks'                                         # tensorboard logdir
+TB_DIR =  'runs'       # dir_name
+EXTRA_STR_YOU_WANT_TO_ADD_TO_TB = ''                                      # things you wish to note apart from the args in this file
+
+
+
+
+### Training ###
+BATCHSIZE =100                                                      # batchsize for training
+NUM_WORKERS = 8                                                          # number of workers
+NUM_EPOCHS = 50                                                         # number of epochs
+
+### OPTIM ###
+OPTIM_NAME = 'SGD'                                                       # name of the optimizer to add to the tensorboard 
+LR = 0.001                                                               # learning rate
+WEIGHT_DECAY = 0.0005                                                    # weight decay
+CKPT_EVERY = false                                                       # checkpointing frequency  
+
+
+### SCHEDULER ###
+SCHEDULER = false
+SCHEDULER_STEPSIZE = false        
+SCHEDULER_GAMMA = false
+
+
+## Optionally resume from a checkpoint
+RESUME_TRAINING = false                                                         # resuming training  
+# if true above, then give a list of filenames (whose length is equal to the number of pcoders) to the resume checkpoints.
+#RESUME_CKPTS= ['save/p_vgg16/pnet_pretrained_pc1.pth','save/p_vgg16/pnet_pretrained_pc2.pth', 'save/p_vgg16/pnet_pretrained_pc3.pth','save/p_vgg16/pnet_pretrained_pc4.pth']            
+RESUME_CKPTS= false
