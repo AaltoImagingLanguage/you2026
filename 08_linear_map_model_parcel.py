@@ -8,7 +8,7 @@ import os
 
 import numpy as np
 import pickle
-from mdpc import MDPC
+from ridge import Ridge
 
 import mne
 import xarray as xr
@@ -130,7 +130,7 @@ def linear_reg_time_courses(
             for it in range(2):  # two states: w/ feedback, w/o feedback
                 x_scaled = x_scaled_all[:, it, :]  # (540, feature_dim)
 
-                mdpc = MDPC(
+                ridge = Ridge(
                     n_splits,
                     alphas=np.logspace(-3, 3, 20),
                     n_jobs=arg.n_jobs,
@@ -138,7 +138,7 @@ def linear_reg_time_courses(
                     n_pca=nc,
                     n_perm=n_perm,
                 )  # alphas:(10^-3 - 10^3)
-                corr2 = mdpc.bv_linear(x_scaled, y_scaled)
+                corr2 = ridge.bv_linear(x_scaled, y_scaled)
                 gof_ev_md[p, it, ii, ...] = corr2
 
                 print(

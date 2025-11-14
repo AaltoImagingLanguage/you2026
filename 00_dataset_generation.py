@@ -6,9 +6,8 @@ import pandas as pd
 from tqdm import tqdm
 import gc
 import io
-from PIL import Image
 from config import word2idx10k
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, Image
 import json
 from config import fname, stimuli
 import pickle

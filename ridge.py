@@ -37,10 +37,8 @@ def correlation_score(y_true, y_pred):
 correlation_scorer = make_scorer(correlation_score, greater_is_better=True)
 
 
-class MDPC:
+class Ridge:
     """
-    Simplified Optimized Multi-Dimensional Pattern Classification
-
     Supports two modes: n_perm=0 (no permutations) or n_perm=1000 (permutation testing)
     """
 
