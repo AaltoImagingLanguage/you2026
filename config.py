@@ -28,7 +28,7 @@ FF_START = True  # to start from feedforward initialization
 time_step = 2  # 20 ms
 time_interval = 0.1  # 10 ms
 # Time window parameters
-time_windows = [[0.1, 0.3], [0.3, 0.5], [0.5, 0.7], [0.7, 0.9], [0.9, 1.1]]
+time_windows = [[0, 0.2], [0.2, 0.4], [0.4, 0.6], [0.6, 0.8], [0.8, 1.0]]
 
 # source reconstruction parameters
 snr_epoch = 3.0
