@@ -40,7 +40,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument(
     "--parcel_id",
     type=str,
-    default=40,
+    default=65,
     help="ids of the parcel to analyze, range from [0,136], 40->vOT, 65->ST",
 )
 parser.add_argument(
@@ -174,16 +174,16 @@ metric = args.metric
 import mne_rsa
 from utility import plot_meg_rdms
 
-for tmin, tmax in time_windows:
-    print(f"Analyzing time window: {tmin} - {tmax} seconds")
+for tmin, _ in time_windows:
+    print(f"Computing RDM at time: {time} seconds")
 
-    #report tge time in the middle of the window
-    data_time = data_avg.sel(time=(tmin+tmax)/2,  method='nearest')
+    #report the time in the middle of the window
+    data_time = data_avg.sel(time=tmin,  method='nearest')
    
     # Compute RDM
     rdm = mne_rsa.compute_rdm(data_time.data, metric=metric)
     rdms.append(rdm)
-    names.append(f"{int(tmin*1000)}-{int(tmax*1000)} ms")
+    names.append(f"{int(tmin*1000)} ms")
 fig = plot_meg_rdms(
     rdms,
     names=names,
