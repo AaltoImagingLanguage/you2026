@@ -16,8 +16,9 @@ from config import (
     event_id,
     metric_rsa,
     metric_rdm,
+    fb_timestep
 )
-
+# metric_rdm = "cosine"  # euclidean, correlation, cosine
 
 import argparse
 
@@ -25,7 +26,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument(
     "--parcel_ind",
     type=int,
-    default=40,
+    default=65,
     help="index of parcel to analyze, e.g., 40 for vOT, 65 for ST",
 )
 
@@ -42,7 +43,7 @@ data = data.sel(time=slice(0, time_len))
 times = data.time
 times = data.time[::time_step]
 times = times[
-    times <= time_len - time_interval
+    times <= time_len
 ]  # make sure the 100 ms time window extracted is within the data range
 
 
@@ -69,7 +70,7 @@ for p in rep_dict:
     rdms = []
     data_p = np.array([rep_dict[p][sti] for sti in sti_types])
     data_p = data_p.mean(1)  # average across stimuli within each condition
-    for it in range(2):  # two states: w/ feedback, w/o feedback
+    for it in [0, fb_timestep]:  # two states: w/ feedback, w/o feedback
 
         reps_array = data_p[:, it, :]
         rdm = mne_rsa.compute_rdm(reps_array, metric=metric_rdm)

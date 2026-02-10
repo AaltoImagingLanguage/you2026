@@ -43,7 +43,7 @@ parser.add_argument(
 arg = parser.parse_args()
 metric = metric_rsa
 
-data_all = []
+rsa_all = []
 if not os.path.exists(fname.rsa_tc(roi="whole_brain")):
     for roi_ind in range(len(labels)):
 
@@ -51,16 +51,16 @@ if not os.path.exists(fname.rsa_tc(roi="whole_brain")):
         time = data.time * 1000
         data = data.expand_dims("parcel_ind")
         data = data.assign_coords(parcel_ind=[roi_ind])
-        data_all.append(data)
-    data_all = xr.concat(data_all, dim="parcel_ind")
-    data_all.to_netcdf(
+        rsa_all.append(data)
+    rsa_all = xr.concat(rsa_all, dim="parcel_ind")
+    rsa_all.to_netcdf(
         fname.rsa_tc(
             roi="whole_brain",
         )
     )  # (3,2,51,10)-> (pcoder, fb, time, split)
 else:
-    print("loading precomputed whole brain data...")
-    data_all = xr.load_dataarray(fname.rsa_tc(roi=f"whole_brain"))
+    print("loading precomputed whole brain rsa scores...")
+    rsa_all = xr.load_dataarray(fname.rsa_tc(roi=f"whole_brain")) #
 
 
 fig, axs = plt.subplots(3, 5, figsize=(15, 4.5))
@@ -83,7 +83,7 @@ for w in range(len(time_windows)):
             background="white",
         )
         if i < 2:
-            data = data_all.isel(pcoder=j, feedback=i)
+            data = rsa_all.isel(pcoder=j, feedback=i)
             data = data.sel(time=slice(time_window[0], time_window[1])).mean(dim="time")
             data_avg = data.mean(dim="subject")  # (137,)
 
@@ -96,7 +96,7 @@ for w in range(len(time_windows)):
             )
             axs[i, 0].set_ylabel("w/o feedback" if i == 0 else "w/ feedback")
         else:
-            data = data_all.isel(pcoder=j, feedback=1) - data_all.isel(
+            data = rsa_all.isel(pcoder=j, feedback=1) - rsa_all.isel(
                 pcoder=j, feedback=0
             )
             data = data.sel(time=slice(time_window[0], time_window[1]))  # (137,23,10)

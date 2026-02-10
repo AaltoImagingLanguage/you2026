@@ -20,7 +20,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument(
     "--parcel_ind",
     type=int,
-    default=40,
+    default=65,
     help="id of the parcel to analyze, e.g., 40 for vOT, 65 for ST",
 )
 
@@ -84,13 +84,15 @@ fig.legend(
     bbox_to_anchor=(1, 1),
 )
 fig.suptitle(
-    f"{[k for k, v in rois.items() if v == roi_id][0]}",
+     f"{[k for k, v in rois.items() if v == roi_id][0]}",
     y=1.05,
+    x=0.05,
+    ha="left",
     fontweight="bold",
 )
 
 plt.savefig(
-    fname.fig_rsa_roi(roi=roi_id),
+    fname.fig_rsa_roi(roi=f"{[k for k, v in rois.items() if v == roi_id][0]}_rl1"),
     dpi=300,
     bbox_inches="tight",
 )

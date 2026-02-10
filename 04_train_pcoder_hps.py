@@ -3,13 +3,15 @@ from datetime import datetime
 import torch.optim as optim
 import torch.nn as nn
 import gc
-
+from collections import defaultdict
+import json, random
 
 import numpy as np
 from utility import load_pnet, accuracy, compute_soft_target, transform
 from torch.utils.tensorboard import SummaryWriter
-from config import fname, device, epochs_hps, temperature, SAME_PARAM, FF_START
+from config import fname, device, epochs_hps, temperature, SAME_PARAM, FF_START,seed, k
 import webdataset as wds
+from pathlib import Path
 import pickle
 
 ########################
@@ -40,15 +42,20 @@ parser.add_argument(
     "--sti_type",
     type=str,
     default="RL1PW",
-    help="pretrained model suffix to load from",
+    help="which stimulus type to tune the hyperparameters on",
 )
 parser.add_argument(
     "--max_step",
     type=int,
     default=5,
-    help="pretrained model suffix to load from",
+    help="max time step to consider for training and evaluation",
 )
-
+parser.add_argument(
+    "--val_fold",
+    type=int,
+    default=0,
+    help="which fold to use as validation fold",
+)
 
 args, _ = parser.parse_known_args()
 
@@ -58,7 +65,7 @@ type_hp = args.hp_type
 
 TASK_NAME = args.net
 version = args.version
-leng = 135  # number of stimuli
+# leng will be set after fold split is created (line ~90)
 feedforward = False
 LOG_DIR = fname.log_hps(n_step=MAX_TIMESTEP, sti_type=sti_type)
 
@@ -119,8 +126,8 @@ def evaluate(
                 correct[tt] += acc5
 
     for tt in range(timesteps + 1):
-        test_loss[tt] /= leng
-        correct[tt] /= leng
+        test_loss[tt] /= val_leng
+        correct[tt] /= val_leng
         print(
             "Test set t = {:02d}: Average loss: {:.4f}, Accuracy: {:.4f}".format(
                 tt, test_loss[tt], correct[tt]
@@ -183,6 +190,16 @@ def train(net, epoch, dataloader, timesteps, writer=None):
             )
 
 
+def _loads_json(maybe_bytes_or_str):
+    if isinstance(maybe_bytes_or_str, (bytes, bytearray)):
+        maybe_bytes_or_str = maybe_bytes_or_str.decode("utf-8")
+    return json.loads(maybe_bytes_or_str)
+
+
+def _norm_key(k):
+    return k.decode("utf-8") if isinstance(k, (bytes, bytearray)) else k
+
+
 def log_hyper_parameters(net, epoch, sumwriter, same_param=True):
     if same_param:
         sumwriter.add_scalar(
@@ -240,13 +257,64 @@ def log_hyper_parameters(net, epoch, sumwriter, same_param=True):
                 )
 
 
-val_wrdset = (
-    wds.WebDataset(f"{fname.dataset_dir}/{sti_type}.tar")
+# Load or generate fold assignments
+
+tar = f"{fname.dataset_dir}/{sti_type}.tar"
+fold_path = fname.cv_folds
+
+if fold_path.exists():
+    fold_of_key = json.load(open(fold_path))["fold_of_key"]
+else:
+    
+    groups = defaultdict(list)
+
+    for key, meta_json in wds.WebDataset(tar).to_tuple("__key__", "json"):
+        meta = _loads_json(meta_json)
+        groups[int(meta["type_idx"])].append(_norm_key(key))
+
+    rng = random.Random(seed)
+    fold_of_key = {}
+
+    for type_idx, keys in groups.items():
+        rng.shuffle(keys)
+        for i, key in enumerate(keys):
+            fold_of_key[key] = i % k
+
+    out = {"k": k, "seed": seed, "fold_of_key": fold_of_key}
+    with open(fold_path, "w") as f:
+        json.dump(out, f)
+    print(f"Wrote {fold_path}")
+
+val_fold = args.val_fold
+
+# Create base dataset
+base = (
+    wds.WebDataset(tar)
     .decode("pil")
     .map_dict(png=transform)
-    .to_tuple("png", "cls", "json")
 )
 
+
+def _fold_for_sample(s):
+    return fold_of_key.get(_norm_key(s["__key__"]))
+
+
+# Split into train and validation using fold assignments
+train_wrdset = base.select(
+    lambda s: (f := _fold_for_sample(s)) is not None and f != val_fold
+).to_tuple("png", "cls", "json")
+
+val_wrdset = base.select(
+    lambda s: (_fold_for_sample(s) == val_fold)
+).to_tuple("png", "cls", "json")
+
+train_loader = torch.utils.data.DataLoader(
+    train_wrdset,
+    batch_size=1,
+    shuffle=False,
+    num_workers=1,
+    pin_memory=True,
+)
 
 val_loader = torch.utils.data.DataLoader(
     val_wrdset,
@@ -255,6 +323,16 @@ val_loader = torch.utils.data.DataLoader(
     num_workers=1,
     pin_memory=True,
 )
+
+# Compute training set size from fold counts
+# For stratified CV: 4/5 of data in train, 1/5 in validation
+# Assuming 135 total samples per sti_type, train_set ≈ 108, val_set ≈ 27
+# Count samples in each split by scanning fold_of_key
+train_count = sum(1 for f in fold_of_key.values() if f != val_fold)
+val_count = sum(1 for f in fold_of_key.values() if f == val_fold)
+leng = train_count  # Use training set size for progress reporting
+val_leng = val_count  # Use validation set size for progress reporting
+print(f"Fold split: train={train_count}, val={val_count}, val_fold={val_fold}")
 
 sumwriter = SummaryWriter(f"{LOG_DIR}/", filename_suffix=f"")
 start = datetime.now()
@@ -348,12 +426,12 @@ best_loss = np.sum(loss)  # initial loss with initial hyperparamters
 
 print("Initial loss:", best_loss)
 patients = 1000
-best_acc = acc[0]  # acc under best loss
+best_acc = np.mean(acc)  # acc under best loss
 best_hyps = 0
 
 # results to save
 for epoch in range(1, epochs_hps + 1):
-    train(pnet, epoch, val_loader, timesteps=MAX_TIMESTEP, writer=sumwriter)
+    train(pnet, epoch, train_loader, timesteps=MAX_TIMESTEP, writer=sumwriter)
     print(datetime.now() - start)
     log_hyper_parameters(pnet, epoch, sumwriter, same_param=SAME_PARAM)
 
@@ -373,7 +451,7 @@ for epoch in range(1, epochs_hps + 1):
     sum_acc = np.mean(acc)
     is_best = best_acc < sum_acc
     if is_best:
-        patients = 1000
+        patients = patients
         best_hyps = hps
         best_acc = sum_acc
         best_loss_list = loss
@@ -383,7 +461,7 @@ for epoch in range(1, epochs_hps + 1):
                 "acc": best_acc,
                 "hps": best_hyps,
             },
-            f"{fname.hps_dir}/{TASK_NAME}_{version}_epoch{epoch}_best_hps.pth",
+            fname.hps_ckpt(n_fold=val_fold),
         )
         print("current_acc:", best_acc)
         print("best hyps:", best_hyps)

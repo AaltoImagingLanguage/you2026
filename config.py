@@ -14,12 +14,16 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 plt.style.use("seaborn-v0_8-whitegrid")
-
+use_cuda = torch.cuda.is_available()
+device = torch.device("cuda:0" if use_cuda else "cpu")
 # Feedback parameters
-max_timestep = 30  # max time steps to consider in the recurrent feedback
-fb_timestep = 23  # time step to selct as stable feedback connection state
+max_timestep =29 # max time steps to consider in the recurrent feedback
+fb_timestep = 25# time step to selct as stable feedback connection state
 fb_colors = ["lightblue", "lightcoral"]
 temperature = 1
+
+k=5  # number of folds for cross-validation for hyperparameter tuning of the predictive coding model
+seed=0 # random seed for fold assignment
 
 SAME_PARAM = False  # to use the same parameters for all pcoders or not
 FF_START = True  # to start from feedforward initialization
@@ -37,7 +41,7 @@ pick_ori = "normal"  # 'normal' for source space time course
 
 # metrics
 metric_rsa = "spearman"  # spearman, pearson, kendalltaua, regression
-metric_rdm = "correlation"  # euclidean, correlation, cityblock
+metric_rdm = "correlation"  # euclidean, correlation, cosine
 
 
 # liear regression parameters
@@ -135,8 +139,10 @@ fname = FileNames()
 
 # dataset and model paths
 
-fname.add("data_dir", "../data")  # whcere the data is downloaded
+fname.add("data_dir", "../data")  # whcere the data is downloadeddata_dirm
 fname.add("dataset_dir", "{data_dir}/images_dataset/")
+
+fname.add("cv_folds", "{data_dir}/cv_fold_assignments.json")
 
 fname.add("exper_data_dir", "{data_dir}/dataset/")
 fname.add("word2idx_dir", "{exper_data_dir}/word2idx.pkl")
@@ -153,11 +159,13 @@ fname.add("pnet_dir", "{net_dir}/fb_pnet/")
 fname.add("hps_dir", "{net_dir}/hps/")
 fname.add("ff_ckpt", "{bb_dir}/vgg16_checkpoint_best.pth.tar")
 fname.add("pcoder_ckpt", "{pnet_dir}/p_vgg16_Separate_v1_best_pc")
-fname.add("hps_ckpt", "{hps_dir}/vgg16_v1_best_hps.pth")
 
+
+
+fname.add("hps_ckpt", "{hps_dir}/vgg16_v1_best_hps_fold{n_fold}.pth") # best hyperparameters
 # behavioral data
 fname.add("stimuli_dir", "{data_dir}/behavirior/")
-fname.add("accs", "{data_dir}/behavirior/model_iterate_accs.pkl", mkdir=True)
+fname.add("accs", "{data_dir}/behavirior/model_iterate_accs_fold{n_fold}.pkl", mkdir=True)
 fname.add("out_atvs", "{data_dir}/behavirior/output_activations.pkl", mkdir=True)
 fname.add("pcoder_reps", "{data_dir}/behavirior/pcoder_reps_conds.pkl", mkdir=True)
 
@@ -236,7 +244,12 @@ fname.add(
     mkdir=True,
 )
 fname.add(
-    "fig_acc",
-    "{figures_dir}/behav/iterate_accs.pdf",
+    "fig_acc_fold",
+    "{figures_dir}/behav/iterate_accs_fold{n_fold}.pdf",
+    mkdir=True,
+)
+fname.add(
+    "fig_acc_mean",
+    "{figures_dir}/behav/iterate_accs_mean.pdf",
     mkdir=True,
 )

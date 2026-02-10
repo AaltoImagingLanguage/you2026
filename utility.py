@@ -27,6 +27,10 @@ import torchvision.transforms as transforms
 
 with open(fname.word2idx_dir, "rb") as file:
     word2idx10k = pickle.load(file)
+
+stimuli = pd.read_csv("../data/stimuli.csv")
+stimuli = stimuli[stimuli["target"] == "0"]
+
 transform = torchvision.transforms.Compose(
     [
         # torchvision.transforms.CenterCrop(224),
@@ -1019,7 +1023,7 @@ def plot_meg_rdms(
         labelpad=10,
     )
     if title is not None:
-        plt.suptitle(title, fontweight="bold")
+        plt.suptitle(title, x=0.12,fontweight="bold", fontsize=12)
     return fig
 
 

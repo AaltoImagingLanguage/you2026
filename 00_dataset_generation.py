@@ -6,10 +6,10 @@ import pandas as pd
 from tqdm import tqdm
 import gc
 import io
-from config import word2idx10k
+from utility import word2idx10k, stimuli
 from PIL import Image, ImageDraw, ImageFont, Image
 import json
-from config import fname, stimuli
+from config import fname
 import pickle
 
 
@@ -420,21 +420,20 @@ def CreateStimuliWebDataset(path_out, font, type, stimuli):
 
 if __name__ == "__main__":
     # create datasets for training and validation
-    with open(fname.word2idx_dir, "rb") as file:
-        word2idx10k = pickle.load(file)
+    # with open(fname.word2idx_dir, "rb") as file:
+    #     word2idx10k = pickle.load(file)
 
-    words1k = list(word2idx10k.keys())
+    # words1k = list(word2idx10k.keys())
 
-    # generate wordset dataset for training and validation
-    CreateWordSetWebDataset(
-        path_out=fname.dataset_dir,
-        font_path=fname.fonts_dir,
-        wordlist=words1k,
-    )
+    # # generate wordset dataset for training and validation
+    # CreateWordSetWebDataset(
+    #     path_out=fname.dataset_dir,
+    #     font_path=fname.fonts_dir,
+    #     wordlist=words1k,
+    # )
 
     # create stimuli dataset for testing
-    stimuli = pd.read_csv(fname.stimuli_dir)
-    stimuli = stimuli[stimuli["target"] == "0"]
+    
     CreateStimuliWebDataset(
         path_out=fname.dataset_dir, stimuli=stimuli, font="courier", type="stimuli"
     )

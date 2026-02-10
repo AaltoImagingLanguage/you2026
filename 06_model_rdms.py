@@ -15,7 +15,7 @@ import torch.nn as nn
 import webdataset as wds
 
 from utility import plot_rdms_model, get_pmodel, transform
-from config import fname, event_id, fb_timestep, max_timestep
+from config import fname, event_id, max_timestep, fb_timestep,k
 
 device = torch.device("cuda:0")
 import sys
@@ -30,7 +30,7 @@ parser = argparse.ArgumentParser(description="plot model behavior")
 parser.add_argument(
     "--batchsize",
     type=int,
-    default=60,
+    default=64,
     help="batch size for computing model behavioral results",
 )
 parser.add_argument(
@@ -42,14 +42,8 @@ parser.add_argument(
 parser.add_argument(
     "--compute",
     type=bool,
-    default=True,
+    default=False,
     help="whether to compute the model representations or load from saved files",
-)
-parser.add_argument(
-    "--plot_acc", type=bool, default=False, help="Whether to plot accuracy"
-)
-parser.add_argument(
-    "--plot_out", type=bool, default=True, help="Whether to plot output activations"
 )
 args, _ = parser.parse_known_args()
 
@@ -57,7 +51,7 @@ args, _ = parser.parse_known_args()
 sti_types = list(event_id.keys())
 
 
-def get_model_reps(net, max_timestep, time_gap, features="rep"):
+def get_model_reps(net, max_timestep,  features="rep"):
 
     net.eval()
     rep_dict = {f"pcoder{p+1}": {} for p in range(num_pcoders)}
@@ -82,19 +76,19 @@ def get_model_reps(net, max_timestep, time_gap, features="rep"):
                         _ = net(None)
 
                 pcoder_curr = getattr(net, name)
-                if t == 0 or t == time_gap:
-                    if p != num_pcoders - 1:
-                        time_steps_reps.append(
-                            getattr(pcoder_curr, features).cpu().numpy()
+                
+                if p != num_pcoders - 1:
+                    time_steps_reps.append(
+                        getattr(pcoder_curr, features).cpu().numpy()
+                    )
+                else:
+                    time_steps_reps.append(
+                        (
+                            nn.ReLU(inplace=False)(getattr(pcoder_curr, features))
+                            .cpu()
+                            .numpy()
                         )
-                    else:
-                        time_steps_reps.append(
-                            (
-                                nn.ReLU(inplace=False)(getattr(pcoder_curr, features))
-                                .cpu()
-                                .numpy()
-                            )
-                        )
+                    )
             time_steps_reps = np.array(time_steps_reps)  # (timesteps, batch, features)
             time_steps_reps = np.transpose(
                 time_steps_reps, (1, 0, 2)
@@ -113,11 +107,17 @@ def get_model_reps(net, max_timestep, time_gap, features="rep"):
 
 tstart = datetime.now()
 if args.compute:
-
-    hps_root = fname.hps_ckpt
-    hps_data = torch.load(hps_root, weights_only=False)
-    hps = hps_data["hps"]
-    print("Loaded hps from:", hps_root)
+    hps_cvs=[]
+    for n_fold in range(k):
+        hps_data = torch.load(fname.hps_ckpt(n_fold=n_fold), weights_only=False)
+        hps = hps_data["hps"]
+        hps_cvs.append(hps)
+    hps = np.median(hps_cvs, axis=0).round(3)
+    assert hps[:3].sum()==1, "first coder ffm, fbm, erm should sum to 1"
+    assert hps[4:7].sum()==1, "second coder ffm, fbm, erm should sum to 1"
+    assert hps[8:11].sum()==1, "third coder ffm, fbm, erm should sum to 1"
+    
+    print(hps)
     hps = [
         {"ffm": hps[0], "fbm": hps[1], "erm": hps[3]},
         {"ffm": hps[4], "fbm": hps[5], "erm": hps[7]},
@@ -148,7 +148,8 @@ if args.compute:
     )
 
     print(f"getting rep for model...")
-    rep_dict, stimuli_all = get_model_reps(model, max_timestep, fb_timestep)
+    print(max_timestep,)
+    rep_dict, stimuli_all = get_model_reps(model, max_timestep,)
 
     with open(
         fname.pcoder_reps,
@@ -183,7 +184,7 @@ for p in rep_dict:
         )  # average across trials
     data_p = np.array([rep_dict[p][sti] for sti in sti_types])
 
-    for it in range(2):  # two states: w/ feedback, w/o feedback
+    for it in [0,fb_timestep]:  # two states: w/ feedback, w/o feedback
 
         reps_array = data_p[:, it, :]
         rdm = mne_rsa.compute_rdm(reps_array, metric=metric)

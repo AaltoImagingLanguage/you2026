@@ -245,7 +245,7 @@ cbar1 = fig.colorbar(
     mpl.cm.ScalarMappable(norm=norm0, cmap=cmap0),
     ax=axs[0:2, :],
     orientation="vertical",
-    shrink=0.5,
+    shrink=0.8,
 )
 cbar1.set_label(
     "Prediction score",
@@ -257,10 +257,10 @@ cbar2 = fig.colorbar(
     mpl.cm.ScalarMappable(norm=norm1, cmap=cmap1),
     ax=axs[2:, :],
     orientation="vertical",
-    shrink=0.5,
+    shrink=0.8,
 )
 cbar2.set_label(
-    "Prediction score",
+    "Difference in prediction score",
     rotation=270,
     labelpad=15,
 )
