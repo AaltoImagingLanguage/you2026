@@ -21,6 +21,7 @@ from sklearn.pipeline import Pipeline
 import matplotlib.gridspec as gridspec
 import mne
 from scipy import sparse
+from config import fname
 
 import torchvision
 import torchvision.transforms as transforms
@@ -28,7 +29,7 @@ import torchvision.transforms as transforms
 with open(fname.word2idx_dir, "rb") as file:
     word2idx10k = pickle.load(file)
 
-stimuli = pd.read_csv("../data/stimuli.csv")
+stimuli = pd.read_csv(f"{fname.data_dir}/stimuli.csv")
 stimuli = stimuli[stimuli["target"] == "0"]
 
 transform = torchvision.transforms.Compose(

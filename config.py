@@ -139,7 +139,7 @@ fname = FileNames()
 
 # dataset and model paths
 
-fname.add("data_dir", "../data")  # whcere the data is downloadeddata_dirm
+fname.add("data_dir", "data")  # whcere the data is downloadeddata_dirm
 fname.add("dataset_dir", "{data_dir}/images_dataset/")
 
 fname.add("cv_folds", "{data_dir}/cv_fold_assignments.json")

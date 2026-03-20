@@ -6,3 +6,5 @@ figures/
 .vscode/
 # All name folders, and files and folders in any name folder
 sbatch/
+data/
+data*
