@@ -1,13 +1,15 @@
 # Predictive coding narrows the gap between convolutional networks and human brain function in misspelled-word reading
 
-Jiaxin You, Riitta Salmelin, and Marijn van Vliet (2026). "Predictive coding narrows the gap between convolutional networks and human brain function in misspelled-word reading". This repo contains Python scripts for dataset generation, Predictive coding model training/evaluation, model-brain comparison and figure producing.  The predictive-coding components in this work rely on [Predify (GitHub)](https://github.com/miladmozafari/predify).
+Jiaxin You, Riitta Salmelin, and Marijn van Vliet (2026). "Predictive coding narrows the gap between convolutional networks and human brain function in misspelled-word reading". 
+
+This repo contains Python scripts for dataset generation, Predictive coding model training/evaluation, model-brain comparison and figure producing.  The predictive-coding components in this work rely on [Predify (GitHub)](https://github.com/miladmozafari/predify).
+
+**Data**
+- Project data (non-personal) are stored on OSF: https://osf.io/8472e
+- After downloading, set `data_dir` in `config.py` to the folder where you extracted the data.
 
 **Installation**
-Data used in this project but don't contain personal imformation are stored on OSF: https://osf.io/8472e
-
-Set the `data_dir` variable in `config.py` to the folder into which you have un-zipped the data.
-
-The Python packages required are listed in `requirements.txt`. One way to install them is through pip:
+The required Python packages are listed in `requirements.txt`. One way to install them is through pip:
 
 `pip install -r requirements.txt`
 
