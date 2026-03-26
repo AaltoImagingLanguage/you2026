@@ -21,7 +21,7 @@ The required Python packages are listed in `requirements.txt`. One way to instal
 - `03_train_feedback_weights.py` : Train feedback components of predictive coding model.
 - `04_train_pcoder_hps.py` : Hyperparameter optimation for predictive coding model using five-fold cross validation.
 - `05_Fig2b_model_behavior_mean_folds.py` : Produce model behaviorly performance with hyperparameters averaged across folds (Figure 2b).
-- `05_Fig2c-d_model_behavior_median_fold.py` : Produce model behavior with meidan hyperparameters across folds.
+- `05_Fig2c-d_model_behavior_median_fold.py` : Produce model behavior with meidan hyperparameters across folds  (Figure 2c-d).
 - `06_meg_rois_rdms.py` / `06_model_rdms.py` : RDM computations for MEG ROIs and model representations.
 - `07_*` : Computate RSA time courses between RDMs of model and parcel representation and plot the results.
 - `08_*` : Linear mapping / ridge mapping from model to parcel representations and plot the results.
