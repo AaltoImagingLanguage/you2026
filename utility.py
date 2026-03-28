@@ -447,7 +447,8 @@ def plot_output(outputs, stimulus, base, ind, n_units=10):
         ax.set_xlabel("Unit activation", fontsize=13)
         if t_step == 0:
             ax.set_ylabel(f"Lexical units (top {n_units})", fontsize=13)
-        ax.set_title(f"{"w/" if t_step else "w/o"} feedback", fontsize=13)
+        label = "w/" if t_step else "w/o"
+        ax.set_title(f"{label} feedback", fontsize=13)
         ax.grid(axis="x", alpha=0.3, linestyle="--")
 
     plt.suptitle(f"Stimulus: {stimulus.lower()}; Base: {base.lower()}", fontsize=13)
@@ -1024,7 +1025,7 @@ def plot_meg_rdms(
         labelpad=10,
     )
     if title is not None:
-        plt.suptitle(title, x=0.12,fontweight="bold", fontsize=12)
+        plt.suptitle(title, x=0.12, fontweight="bold", fontsize=12)
     return fig
 
 

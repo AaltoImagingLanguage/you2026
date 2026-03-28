@@ -246,10 +246,12 @@ fname.add(
 fname.add(
     "fig_acc_fold",
     "{figures_dir}/behav/iterate_accs_fold{n_fold}.pdf",
+    # "{figures_dir}/behav/iterate_accs_fold{n_fold}.pgf",
     mkdir=True,
 )
 fname.add(
     "fig_acc_mean",
     "{figures_dir}/behav/iterate_accs_mean.pdf",
+    # "{figures_dir}/behav/iterate_accs_mean.pgf",
     mkdir=True,
 )

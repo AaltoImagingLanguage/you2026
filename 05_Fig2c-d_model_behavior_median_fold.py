@@ -49,7 +49,7 @@ parser.add_argument(
 parser.add_argument(
     "--compute",
     type=bool,
-    default=True,
+    default=False,
     help="whether to compute the model behaviral results or load from saved files",
 )
 parser.add_argument(
@@ -368,13 +368,13 @@ if args.plot_acc:
                 color=category_colors[i],
             )
 
-        plt.xlabel("Timesteps", fontsize=18, labelpad=25)
+        plt.xlabel("Timesteps", fontsize=22, labelpad=25)
 
-        plt.ylabel("Accuracy (%)", fontsize=18, labelpad=40)
-        plt.legend(bbox_to_anchor=(1, 1), loc="upper left", fontsize=18)
+        plt.ylabel("Accuracy (%)", fontsize=22, labelpad=40)
+        plt.legend(bbox_to_anchor=(1, 1), loc="upper left", fontsize=222)
         # bax.vlines(23, 13, 102, colors="grey", linestyles="dashed")
 
-        plt.tick_params(axis="both", labelsize=14)
+        plt.tick_params(axis="both", labelsize=22)
     else: 
         
         ylims=((8,23), (50, 67), (76, 98), (99, 101))
@@ -397,13 +397,13 @@ if args.plot_acc:
             )
             print(acc_means.values())
 
-        bax.set_xlabel("Timesteps", fontsize=18, labelpad=25)
+        bax.set_xlabel("Timesteps", fontsize=20, labelpad=25)
 
-        bax.set_ylabel("Accuracy (%)", fontsize=18, labelpad=40)
+        bax.set_ylabel("Accuracy (%)", fontsize=20, labelpad=40)
         bax.legend(bbox_to_anchor=(1, 1), loc="upper left", fontsize=18)
-        bax.vlines(25, 13, 102, colors="grey", linestyles="dashed",  linewidth=2)
+        bax.vlines(25, 8, 101, colors="grey", linestyles="dashed",  linewidth=2)
 
-        bax.tick_params(axis="both", labelsize=14)
+        bax.tick_params(axis="both", labelsize=18)
 
     plt.savefig(
         fname.fig_acc_fold(n_fold=n_fold),

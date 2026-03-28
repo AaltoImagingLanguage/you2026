@@ -60,7 +60,7 @@ if not os.path.exists(fname.rsa_tc(roi="whole_brain")):
     )  # (3,2,51,10)-> (pcoder, fb, time, split)
 else:
     print("loading precomputed whole brain rsa scores...")
-    rsa_all = xr.load_dataarray(fname.rsa_tc(roi=f"whole_brain")) #
+    rsa_all = xr.load_dataarray(fname.rsa_tc(roi=f"whole_brain"))  #
 
 
 fig, axs = plt.subplots(3, 5, figsize=(15, 4.5))
@@ -174,4 +174,3 @@ plt.savefig(
     bbox_inches="tight",
 )
 plt.show()
-

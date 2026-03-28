@@ -9,7 +9,7 @@ import json, random
 import numpy as np
 from utility import load_pnet, accuracy, compute_soft_target, transform
 from torch.utils.tensorboard import SummaryWriter
-from config import fname, device, epochs_hps, temperature, SAME_PARAM, FF_START,seed, k
+from config import fname, device, epochs_hps, temperature, SAME_PARAM, FF_START, seed, k
 import webdataset as wds
 from pathlib import Path
 import pickle
@@ -265,7 +265,7 @@ fold_path = fname.cv_folds
 if fold_path.exists():
     fold_of_key = json.load(open(fold_path))["fold_of_key"]
 else:
-    
+
     groups = defaultdict(list)
 
     for key, meta_json in wds.WebDataset(tar).to_tuple("__key__", "json"):
@@ -288,11 +288,7 @@ else:
 val_fold = args.val_fold
 
 # Create base dataset
-base = (
-    wds.WebDataset(tar)
-    .decode("pil")
-    .map_dict(png=transform)
-)
+base = wds.WebDataset(tar).decode("pil").map_dict(png=transform)
 
 
 def _fold_for_sample(s):
@@ -304,9 +300,9 @@ train_wrdset = base.select(
     lambda s: (f := _fold_for_sample(s)) is not None and f != val_fold
 ).to_tuple("png", "cls", "json")
 
-val_wrdset = base.select(
-    lambda s: (_fold_for_sample(s) == val_fold)
-).to_tuple("png", "cls", "json")
+val_wrdset = base.select(lambda s: (_fold_for_sample(s) == val_fold)).to_tuple(
+    "png", "cls", "json"
+)
 
 train_loader = torch.utils.data.DataLoader(
     train_wrdset,

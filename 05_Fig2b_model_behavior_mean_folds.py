@@ -18,7 +18,7 @@ with open(fname.word2idx_dir, "rb") as file:
 words1k = list(word2idx10k.keys())
 sti_types = list(event_id.keys())
 
-
+fontsize = 18
 
 
 overall_accs = {sti: [] for sti in sti_types}
@@ -74,9 +74,9 @@ for i, (sti, data) in enumerate(averaged_accs.items()):
         linewidth=2,
     )
 
-bax.set_xlabel("Timesteps", fontsize=18, labelpad=25)
+bax.set_xlabel("Timesteps", fontsize=20, labelpad=25)
 # plt.xlim(0, 29)
-bax.set_ylabel("Accuracy (%)", fontsize=18, labelpad=40)
+bax.set_ylabel("Accuracy (%)", fontsize=20, labelpad=40)
 mean_handles = []
 mean_labels = []
 for i, sti in enumerate(averaged_accs.keys()):
@@ -89,7 +89,7 @@ ax = plt.gca()
 # Place both legends inside the axes at the same vertical position (axes coords).
 # This keeps them visually aligned and prevents clipping in the saved figure.
 
-left_x = 1.03
+left_x = 1
 
 
 # Mean legend (one entry per stimulus group) - inside axes, solid line + marker
@@ -98,8 +98,8 @@ mean_legend = ax.legend(
     mean_labels,
     bbox_to_anchor=(left_x, 0.8),
     loc="center left",
-    fontsize=18,
-    title_fontsize=18,
+    fontsize=fontsize,
+    title_fontsize=fontsize,
     title="Mean",
     bbox_transform=ax.transAxes,
     frameon=False,
@@ -122,15 +122,15 @@ faint_legend = ax.legend(
     fold_labels,
     bbox_to_anchor=(left_x, 0.3),
     loc="center left",
-    fontsize=18,
+    fontsize=fontsize,
     title="Per fold",
-    title_fontsize=18,
+    title_fontsize=fontsize,
     bbox_transform=ax.transAxes,
     frameon=False,
 )
 ax.add_artist(faint_legend)
 
-bax.tick_params(axis="both", labelsize=14)
+bax.tick_params(axis="both", labelsize=fontsize)
 fig = plt.gcf()
 plt.savefig(
     fname.fig_acc_mean,

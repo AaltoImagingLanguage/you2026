@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 import numpy as np
-from config import fname
+from config import fname, device
 import os
 import time
 from utility import get_model, fetch_pmodel, transform
@@ -55,12 +55,24 @@ parser.add_argument(
 
 
 # Training
-parser.add_argument("--batchsize", type=int, default=50, help="Batch size for training")
+parser.add_argument("--batch_size", type=int, default=4, help="Batch size for training")
 parser.add_argument(
     "--num_workers", type=int, default=8, help="Number of workers for data loading"
 )
 parser.add_argument(
     "--num_epochs", type=int, default=200, help="Number of training epochs"
+)
+parser.add_argument(
+    "--train_samples",
+    type=int,
+    default=None,
+    help="Number of training samples per epoch for WebDataset.with_length",
+)
+parser.add_argument(
+    "--val_samples",
+    type=int,
+    default=None,
+    help="Number of validation samples per epoch for WebDataset.with_length",
 )
 
 # Optimization
@@ -73,7 +85,7 @@ parser.add_argument("--ckpt_every", action="store_true", help="Checkpointing fre
 parser.add_argument(
     "--resume_training",
     type=bool,
-    default=True,
+    default=False,
     help="Resume training from checkpoint",
 )
 parser.add_argument(
@@ -81,21 +93,15 @@ parser.add_argument(
     type=str,
     nargs="+",
     default=[
-        "save/fb_pnet/p_vgg16_Separate_v1_best_pc1.pth",
-        "save/fb_pnet/p_vgg16_Separate_v1_best_pc2.pth",
-        "save/fb_pnet/p_vgg16_Separate_v1_best_pc3.pth",
+        f"{fname.pnet_dir}/p_vgg16_Separate_v1_best_pc1.pth",
+        f"{fname.pnet_dir}/p_vgg16_Separate_v1_best_pc2.pth",
+        f"{fname.pnet_dir}/p_vgg16_Separate_v1_best_pc3.pth",
     ],
     help="Checkpoint file paths",
 )  # accept one or more values as a list
 
 
 args, _ = parser.parse_known_args()
-
-
-# %%
-
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu_to_use)
 
 
 # Setup the training
@@ -106,7 +112,20 @@ if args.random_seed:
     torch.backends.cudnn.benchmark = args.cudnn_benchmark
 
 
-device = torch.device("cuda:0")
+if not os.path.exists(f"{fname.log_dir}"):
+    os.makedirs(f"{fname.log_dir}")
+
+# summarywriter
+tensorboard_path = os.path.join(
+    f"{fname.log_dir}",
+    f"{args.net}_{args.version}_{args.lr}",
+)
+sumwriter = SummaryWriter(tensorboard_path, filename_suffix=f"")
+
+main_str = ""
+for x in vars(args):
+    main_str += f"{x:<20}: {getattr(args,x)}\n"
+sumwriter.add_text("Parameters", f"{main_str}", 0)
 
 
 ################################################
@@ -121,9 +140,9 @@ train_root = fname.ff_ckpt
 # train_root=None
 print("pretrained ckpts:", train_root)
 print("pnet name:", pnet_name)
-print("batchsize:", args.batchsize)
+print("batchsize:", args.batch_size)
 print("learning rate:", args.lr)
-net = get_model(pretrained=True, trained_root=train_root, ngpus=1, model=args.net)
+net = get_model(pretrained=False, trained_root=train_root, ngpus=1, model=args.net)
 pnet = pmodel(net, build_graph=True, random_init=False).to(
     device
 )  # build_graph: gradients
@@ -205,12 +224,13 @@ train_wrdset = (
     .decode("pil")
     .map_dict(png=transform)
     .to_tuple("png", "cls")
-    .batched(args.batch_size)
+    # .batched(args.batch_size)
 )
+
+
 training_gen = torch.utils.data.DataLoader(
     train_wrdset,
     batch_size=args.batch_size,
-    shuffle=True,
     num_workers=args.num_workers,
     pin_memory=True,
 )
@@ -220,32 +240,37 @@ val_wrdset = (
     .decode("pil")
     .map_dict(png=transform)
     .to_tuple("png", "cls")
-    .batched(args.batch_size)
+    # .batched(args.batch_size)
 )
+if args.val_samples is not None:
+    val_wrdset = val_wrdset.with_length(args.val_samples)
+
 validation_gen = torch.utils.data.DataLoader(
     val_wrdset,
-    batch_size=args.num_val_items,
+    batch_size=args.batch_size,
     shuffle=False,
     num_workers=args.num_workers,
     pin_memory=True,
 )
 
 
-def train_pcoders(net, epoch, sumwriter, train_loader, verbose=True):
+def train_pcoders(net, epoch, sumwriter, train_loader):
     """A training epoch"""
 
     net.train()
 
     tstart = time.time()
+    n = 0
     for batch_index, (images, _) in enumerate(train_loader):
+        n += 1
         net.reset()  # rep: None; prd: None
         images = images.to(device)  # (64,3,224,224)
+        # print("images shape:", images.shape)
         optimizer.zero_grad()
         outputs = net(images)
         for i in range(NUMBER_OF_PCODERS):
             if i == 0:
-                a = net.pcoder1.prediction_error  # net.pcoder1.prd (-14218, -1064)
-                # print("net.pcoder1 loss:", a.item())
+                a = net.pcoder1.prediction_error
                 loss = a
             else:
                 pcoder_curr = getattr(net, f"pcoder{i+1}")
@@ -255,7 +280,7 @@ def train_pcoders(net, epoch, sumwriter, train_loader, verbose=True):
             sumwriter.add_scalar(
                 f"MSE Train/PCoder{i+1}",
                 a.item(),
-                epoch * len(train_loader) + batch_index,
+                epoch * n + batch_index,
             )
 
         loss.backward()
@@ -263,18 +288,15 @@ def train_pcoders(net, epoch, sumwriter, train_loader, verbose=True):
 
         if batch_index % 100 == 0:
             print(
-                "Training Epoch: {epoch} [{trained_samples}/{total_samples}]\tLoss: {:0.4f}\tLR: {:0.6f}".format(
+                "Training Epoch: {epoch} [{trained_samples}]\tLoss: {:0.4f}\tLR: {:0.6f}".format(
                     loss.item(),
                     optimizer.param_groups[0]["lr"],
                     epoch=epoch,
-                    trained_samples=batch_index * args.batchsize + len(images),
-                    total_samples=len(train_loader.dataset),
+                    trained_samples=batch_index * args.batch_size + len(images),
                 )
             )
             print("Time taken:", time.time() - tstart)
-        sumwriter.add_scalar(
-            f"MSE Train/Sum", loss.item(), epoch * len(train_loader) + batch_index
-        )
+        sumwriter.add_scalar(f"MSE Train/Sum", loss.item(), epoch * n + batch_index)
 
 
 def test_pcoders(net, epoch, sumwriter, test_loader, verbose=True):
@@ -284,7 +306,9 @@ def test_pcoders(net, epoch, sumwriter, test_loader, verbose=True):
 
     tstart = time.time()
     final_loss = [0 for i in range(NUMBER_OF_PCODERS)]
+    n = 0
     for batch_index, (images, _) in enumerate(test_loader):
+        n += 1
         net.reset()
         images = images.to(device)
         with torch.no_grad():
@@ -299,7 +323,7 @@ def test_pcoders(net, epoch, sumwriter, test_loader, verbose=True):
 
     loss_sum = 0
     for i in range(NUMBER_OF_PCODERS):
-        final_loss[i] /= len(test_loader)
+        final_loss[i] /= n
         loss_sum += final_loss[i]
         sumwriter.add_scalar(f"MSE Test/PCoder{i+1}", final_loss[i], int(epoch))
     sumwriter.add_scalar(f"MSE Test/Sum", loss_sum, int(epoch))
@@ -309,32 +333,13 @@ def test_pcoders(net, epoch, sumwriter, test_loader, verbose=True):
             loss_sum,
             optimizer.param_groups[-1]["lr"],
             epoch=epoch,
-            trained_samples=batch_index * args.batchsize + len(images),
-            total_samples=len(test_loader.dataset),
+            trained_samples=batch_index * args.batch_size + len(images),
+            total_samples=n * args.batch_size,
         )
     )
     print("Time taken:", time.time() - tstart)
 
     return loss_sum
-
-
-################################################
-#        Load checkpoints if given...
-################################################
-if not os.path.exists(f"{fname.log_dir}/{args.tb_dir}"):
-    os.makedirs(f"{fname.log_dir}/{args.tb_dir}")
-
-# summarywriter
-tensorboard_path = os.path.join(
-    f"{fname.log_dir}/{args.tb_dir}",
-    f"{args.net}_{args.version}_{args.lr}_{args.suffix}",
-)
-sumwriter = SummaryWriter(tensorboard_path, filename_suffix=f"")
-
-main_str = ""
-for x in vars(args):
-    main_str += f"{x:<20}: {getattr(args,x)}\n"
-sumwriter.add_text("Parameters", f"{main_str}", 0)
 
 
 ################################################
@@ -347,7 +352,7 @@ patience_counter = 0
 
 def save_checkpoint(state, save_path, epoch=None):
     if epoch is not None:
-        filename = f"{save_path}/p_{args.net}_{args.hp_type}_{args.version}_{args.suffix}_epoch-{epoch:02d}_pc{pcod_idx+1}.pth"
+        filename = f"{save_path}/p_{args.net}_{args.hp_type}_{args.version}_epoch-{epoch:02d}_pc{pcod_idx+1}.pth"
     else:
         filename = f"{save_path}/p_{args.net}_{args.hp_type}_{args.version}_best_pc{pcod_idx+1}.pth"
     torch.save(state, filename)
