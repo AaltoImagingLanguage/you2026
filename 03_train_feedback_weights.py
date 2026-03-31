@@ -13,8 +13,8 @@ import numpy as np
 from config import fname, device
 import os
 import time
-from utility import get_model, fetch_pmodel, transform
-
+from utility import get_model, fetch_pmodel, transform, patch_pcoders
+import types
 ################################################
 #       Global configs
 ################################################
@@ -142,11 +142,12 @@ print("pretrained ckpts:", train_root)
 print("pnet name:", pnet_name)
 print("batchsize:", args.batch_size)
 print("learning rate:", args.lr)
-net = get_model(pretrained=False, trained_root=train_root, ngpus=1, model=args.net)
+net = get_model(pretrained=False, trained_root=train_root, model=args.net)
 pnet = pmodel(net, build_graph=True, random_init=False).to(
     device
-)  # build_graph: gradients
-
+) 
+#patch all PCoderN instances with 1D-compatible compute_C_sqrt
+patch_pcoders(pnet)
 
 NUMBER_OF_PCODERS = pnet.number_of_pcoders
 

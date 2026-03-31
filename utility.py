@@ -21,7 +21,8 @@ from sklearn.pipeline import Pipeline
 import matplotlib.gridspec as gridspec
 import mne
 from scipy import sparse
-from config import fname
+from config import fname, device
+import types
 
 import torchvision
 import torchvision.transforms as transforms
@@ -126,8 +127,8 @@ def accuracy1(output, target, topk=(1,)):
         return res, pred[0]
 
 
-def get_model(pretrained=False, ngpus=0, model="cornet_r", trained_root=None, times=5):
-    map_location = None if ngpus > 0 else "cpu"
+def get_model(pretrained=False, ngpus=1, model="cornet_r", trained_root=None):
+  
 
     # Recurrent version of CORnet-Z. Better than CORnet-Z + recurrent but slow
 
@@ -137,7 +138,7 @@ def get_model(pretrained=False, ngpus=0, model="cornet_r", trained_root=None, ti
         model = vgg16(pretrained=pretrained)
 
     if trained_root:
-        ckpt_data = torch.load(trained_root, weights_only=False)
+        ckpt_data = torch.load(trained_root, weights_only=False, map_location=device)
         model.load_state_dict(ckpt_data["state_dict"])
         print("saved model at epoch: ", ckpt_data["epoch"])
         print("accuracy: ", ckpt_data["best_prec1"])
@@ -274,7 +275,7 @@ def load_pnet(
     if isinstance(net, nn.DataParallel):
         net = net.module
     if backbone_path:
-        checkpoint = torch.load(backbone_path, weights_only=False)
+        checkpoint = torch.load(backbone_path, weights_only=False, map_location=device)
         state_dict = (
             checkpoint["state_dict"] if "state_dict" in checkpoint else checkpoint
         )
@@ -299,7 +300,7 @@ def load_pnet(
         print(f"Loading weights from {pnet_path}")
         if hasattr(pc_model, "numbre_of_pcoders"):
             for n in range(pc_model.numbre_of_pcoders):
-                checkpoints = torch.load(f"{pnet_path}{n+1}.pth", weights_only=False)
+                checkpoints = torch.load(f"{pnet_path}{n+1}.pth", weights_only=False, map_location=device)
                 pc_dict = checkpoints["pcoderweights"]
 
                 if "C_sqrt" not in pc_dict:
@@ -309,7 +310,7 @@ def load_pnet(
 
         else:
             for n in range(pc_model.number_of_pcoders):
-                checkpoints = torch.load(f"{pnet_path}{n+1}.pth", weights_only=False)
+                checkpoints = torch.load(f"{pnet_path}{n+1}.pth", weights_only=False, map_location=device)
                 pc_dict = checkpoints["pcoderweights"]
                 if "C_sqrt" not in pc_dict:
                     pc_dict["C_sqrt"] = torch.tensor(-1, dtype=torch.float)
@@ -324,91 +325,6 @@ def load_pnet(
 
     return pc_model.eval()
 
-
-# def plot_output(output, stimulus, base, ind, n_units=10, t_step=0):
-#     with open("../data/word2idx.pkl", "rb") as file:
-#         word2idx10k = pickle.load(file)
-
-#     with torch.no_grad():
-#         values, pred = output.topk(
-#             n_units, dim=1, largest=True, sorted=True
-#         )  # perd=[1,10], output:[1,100]
-
-#     predicted_words = []
-#     for index in pred[0]:
-#         if index in word2idx10k.values():
-#             word = [k for k, v in word2idx10k.items() if v == index]
-#             predicted_words.extend(word)
-
-
-#     colors = [
-#         "orange" if word == base.lower() else "skyblue" for word in predicted_words
-#     ]
-#     plt.figure(figsize=(6, 4))
-#     plt.bar(predicted_words, values.cpu().numpy().flatten(), color=colors)
-#     plt.title(f"{ind} Stimulus: {stimulus.lower()} Base: {base.lower()}")
-#     plt.xlabel(f"Word class units (top {n_units})")
-#     plt.ylabel("Unit activation")
-#     plt.xticks(rotation=45)
-#     plt.savefig(
-#         f"figures/out_bb1/{ind}_{stimulus}_{n_units}_prediction_RL1_t_step{t_step}.png",
-#         bbox_inches="tight",
-#     )
-#     plt.savefig(
-#         f"figures/out_bb1/{ind}_{stimulus}_{n_units}_prediction_RL1_t_step{t_step}.pdf",
-#         bbox_inches="tight",
-#     )
-# def plot_output(outputs, stimulus, base, ind, n_units=10):
-
-#     fig, axes = plt.subplots(1, 2, figsize=(12, 4), sharey=True)
-
-#     # Process both time steps
-#     outputs
-#     t_steps = [0, 23]
-
-#     for ax, output, t_step in zip(
-#         axes,
-#         outputs,
-#         t_steps,
-#     ):
-#         with torch.no_grad():
-#             values, pred = output.topk(
-#                 n_units, dim=1, largest=True, sorted=True
-#             )  # pred=[1,10], output:[1,100]
-
-#         predicted_words = []
-#         for index in pred[0]:
-#             if index in word2idx10k.values():
-#                 word = [k for k, v in word2idx10k.items() if v == index]
-#                 predicted_words.extend(word)
-
-#         colors = [
-#             "orange" if word == base.lower() else "skyblue" for word in predicted_words
-#         ]
-
-#         ax.bar(predicted_words, values.cpu().numpy().flatten(), color=colors)
-#         ax.set_title(
-#             f"{"w/" if t_step else "w/o"} feedback: {stimulus.lower()} → {predicted_words[0].lower()}"
-#         )
-#         ax.set_xlabel(f"Word class units (top {n_units})")
-#         if t_step == 0:
-#             ax.set_ylabel("Unit activation")
-#         ax.tick_params(axis="x", rotation=45)
-
-#     plt.suptitle(
-#         f"Stimulus: {stimulus.lower()}; Base: {base.lower()}",
-#     )
-#     plt.tight_layout()
-
-#     plt.savefig(
-#         f"figures/out_bb1/{ind}_{stimulus}_{n_units}_prediction_RL1_comparison.png",
-#         bbox_inches="tight",
-#     )
-#     plt.savefig(
-#         f"figures/out_bb1/{ind}_{stimulus}_{n_units}_prediction_RL1_comparison.pdf",
-#         bbox_inches="tight",
-#     )
-#     plt.close()
 
 
 def plot_output(outputs, stimulus, base, ind, n_units=10):
@@ -1361,3 +1277,53 @@ def plot_cluster_label(
     for index in draw_vertex_index:
         roi = rois[index]
         brain.add_label(roi, borders=width, color=color, alpha=alpha)
+
+
+
+# The compute_C_sqrt function is adapted from predify (https://github.com/miladmozafari/predify)
+# Original author: Milad Mozafari and Bhavin Choksi
+# Licensed under GPL-3.0. Modified to support 2D (batch x features) representations.
+def compute_C_sqrt(self, target):
+        r"""
+        Computes `C` and returns its square root.
+        `target` is the tensor to compare the prediction with
+        """
+        if self.rep is None:
+            raise Exception("PCoder's representation cannot be `None` while executing this function.")
+
+        x = self.rep.detach().clone()
+        x.requires_grad = True
+        with torch.enable_grad():
+            xpred = self.pmodule(x)
+            # xloss = nn.functional.mse_loss(xpred, target)
+            # xgrad = torch.autograd.grad(xloss, x, retain_graph=True)[0]
+
+        xpred_orig = xpred.detach().clone()
+
+        cnt = 0
+        for repeat in range(10):
+            x = self.rep.detach().clone()
+            # x[:,x.shape[1]//2,x.shape[2]//2,x.shape[3]//2] = torch.randint(-10000,10000,(x.shape[0],), device=x.device).float() #original
+            x[:,x.shape[1]//2] = torch.randint(-10000,10000,(x.shape[0],), device=x.device).float() #our modification
+            x.requires_grad = True
+            with torch.enable_grad():
+                xpred = self.pmodule(x)
+                # xloss = nn.functional.mse_loss(xpred, target)
+                # xgrad = torch.autograd.grad(xloss, x, retain_graph=True)[0]
+            
+            xpred_rand = xpred.detach().clone()
+            with torch.no_grad():
+                
+                diff = xpred_orig - xpred_rand
+
+                cnt += (xpred_orig != xpred_rand).sum().float() / diff.shape[0]   # divided by the batch size
+        cnt = cnt / 10.0
+        self.C_sqrt = torch.sqrt(cnt)
+
+
+
+def patch_pcoders(model):
+    """Patch all PCoderN instances in a pvgg16v1SeparateHP model."""
+    for name in ['pcoder1', 'pcoder2', 'pcoder3']:
+        pcoder = getattr(model, name)
+        pcoder.compute_C_sqrt = types.MethodType(compute_C_sqrt, pcoder)

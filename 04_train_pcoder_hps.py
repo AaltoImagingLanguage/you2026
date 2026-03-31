@@ -7,7 +7,7 @@ from collections import defaultdict
 import json, random
 
 import numpy as np
-from utility import load_pnet, accuracy, compute_soft_target, transform
+from utility import load_pnet, accuracy, compute_soft_target, patch_pcoders, transform
 from torch.utils.tensorboard import SummaryWriter
 from config import fname, device, epochs_hps, temperature, SAME_PARAM, FF_START, seed, k
 import webdataset as wds
@@ -94,7 +94,7 @@ def evaluate(
     test_loss = np.zeros((timesteps + 1,))
     correct = np.zeros((timesteps + 1,))
     for images, target, json in dataloader:
-        images = images.cuda()
+        images = images.to(device, non_blocking=True)
         base = json["base"]
 
         if type(target) == list:
@@ -149,7 +149,7 @@ def train(net, epoch, dataloader, timesteps, writer=None):
             target = [t.to(device, non_blocking=True) for t in target]
         else:
             target = target.to(device, non_blocking=True)
-        images = images.cuda()
+        images = images.to(device, non_blocking=True)
 
         ttloss = np.zeros((timesteps + 1))
         optimizer.zero_grad()
@@ -377,6 +377,10 @@ pnet = load_pnet(
     er_multiplier=0.1,
     hyperparams=hps,
 ).to(device)
+
+
+patch_pcoders(pnet)
+
 hyperparams = [
     *pnet.get_hyperparameters()
 ]  # -torch.log((1-x)/x) hyperparams[4*pc1, 4*pc2, 4*pc3, ] 4: ff, fb, mem,er,
