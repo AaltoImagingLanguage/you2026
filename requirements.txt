@@ -17,7 +17,6 @@ scikit-learn
 scipy
 statsmodels
 tensorboard
-tensorboard
 torch
 torchvision
 tqdm
