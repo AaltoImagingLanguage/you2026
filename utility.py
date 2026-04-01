@@ -6,7 +6,6 @@ import numpy as np
 from collections import OrderedDict
 import importlib
 import matplotlib.pyplot as plt
-from config import fname
 import torchvision.models as models
 from Levenshtein import distance as DL
 import torch.nn.functional as F
@@ -128,7 +127,7 @@ def accuracy1(output, target, topk=(1,)):
 
 
 def get_model(pretrained=False, ngpus=1, model="cornet_r", trained_root=None):
-  
+
 
     # Recurrent version of CORnet-Z. Better than CORnet-Z + recurrent but slow
 
@@ -1310,10 +1309,10 @@ def compute_C_sqrt(self, target):
                 xpred = self.pmodule(x)
                 # xloss = nn.functional.mse_loss(xpred, target)
                 # xgrad = torch.autograd.grad(xloss, x, retain_graph=True)[0]
-            
+
             xpred_rand = xpred.detach().clone()
             with torch.no_grad():
-                
+
                 diff = xpred_orig - xpred_rand
 
                 cnt += (xpred_orig != xpred_rand).sum().float() / diff.shape[0]   # divided by the batch size

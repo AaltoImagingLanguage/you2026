@@ -30,7 +30,7 @@ from config import (
 import time
 
 # vOt and ST
-mne.set_config("SUBJECTS_DIR", fname.private_mri_subjects_dir)
+mne.set_config("SUBJECTS_DIR", fname.mri_subjects_dir)
 SUBJECT = "fsaverage"
 annotation = mne.read_labels_from_annot("fsaverage", parc=parc, verbose=False)
 labels = [label for label in annotation if "Unknown" not in label.name]

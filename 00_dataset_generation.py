@@ -420,20 +420,19 @@ def CreateStimuliWebDataset(path_out, font, type, stimuli):
 
 if __name__ == "__main__":
     # create datasets for training and validation
-    # with open(fname.word2idx_dir, "rb") as file:
-    #     word2idx10k = pickle.load(file)
+    with open(fname.word2idx_dir, "rb") as file:
+        word2idx10k = pickle.load(file)
 
-    # words1k = list(word2idx10k.keys())
+    words1k = list(word2idx10k.keys())
 
-    # # generate wordset dataset for training and validation
-    # CreateWordSetWebDataset(
-    #     path_out=fname.dataset_dir,
-    #     font_path=fname.fonts_dir,
-    #     wordlist=words1k,
-    # )
+    # generate wordset dataset for training and validation
+    CreateWordSetWebDataset(
+        path_out=fname.dataset_dir,
+        font_path=str(fname.fonts_dir),
+        wordlist=words1k,
+    )
 
     # create stimuli dataset for testing
-    
     CreateStimuliWebDataset(
         path_out=fname.dataset_dir, stimuli=stimuli, font="courier", type="stimuli"
     )
