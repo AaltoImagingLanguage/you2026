@@ -62,15 +62,6 @@ data_dir = "./data"
 # Folder to place the figures in
 figures_dir = "./figures"
 
-# If you also have access to the private data, set the path here
-private_data_dir = None
-
-# These users have access to the private data.
-user = getpass.getuser()  # username of the user running the scripts
-if user == "youj2" or user == "vanvlm1":
-    private_data_dir = "/m/nbe/scratch/flexwordrec/"
-
-
 # parcellation
 parc = "aparc.a2009s_custom_gyrus_sulcus_800mm2"
 
@@ -139,15 +130,15 @@ fname = FileNames()
 
 # dataset and model paths
 
-fname.add("data_dir", "../data")  # whcere the data is downloadeddata_dirm
+fname.add("data_dir", data_dir)  # whcere the data is downloadeddata_dirm
 fname.add("dataset_dir", "{data_dir}/images_dataset/")
 
 fname.add("cv_folds", "{data_dir}/cv_fold_assignments.json")
 
 fname.add("exper_data_dir", "{data_dir}/dataset/")
 fname.add("word2idx_dir", "{exper_data_dir}/word2idx.pkl")
-fname.add("stimuli_dir", "{exper_data_dir}/stimuli.csv")
-fname.add("stimuli_con_dir", "{exper_data_dir}/rep_stimuli.csv")
+fname.add("stimuli", "{exper_data_dir}/stimuli.csv")
+fname.add("stimuli_con", "{exper_data_dir}/rep_stimuli.csv")
 
 
 fname.add("fonts_dir", "{data_dir}/fonts/")
@@ -205,12 +196,6 @@ fname.add(
     "{data_dir}/corr_tc/{roi}_sti_ts{time_step}_ti{time_interval}_pca{nc}.nc",
     mkdir=True,
 )
-private_data_dir = "/m/nbe/scratch/flexwordrec/"
-fname.add(
-    "private_data_dir", "nonexisting" if private_data_dir is None else private_data_dir
-)
-fname.add("private_mri_subjects_dir", "{private_data_dir}/mri_subjects/")
-fname.add("subjects_dir", "{private_data_dir}/subjects/")
 fname.add("inv", "{subjects_dir}/{subject}-{sp}-inv.fif")
 fname.add("epo_con", "{subjects_dir}/{subject}-{condition}-epo.fif")
 fname.add("epo", "{subjects_dir}/{subject}-epo.fif")

@@ -284,7 +284,7 @@ with open(
     rep_dict = pickle.load(f)
 
 # # Get all unique stimuli
-unique_stimuli = pd.read_csv(fname.stimuli_con_dir)
+unique_stimuli = pd.read_csv(fname.stimuli_con)
 events = unique_stimuli.columns.tolist()
 stimuli = []  # (540, 19)
 for condition in events:

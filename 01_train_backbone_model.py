@@ -209,7 +209,7 @@ def validate(test_loader, model, criterion):
     return top1.avg
 
 
-def train_all(save_path=fname.save):
+def train_all():
     start_time = time.time()
 
     # CUDA for PyTorch
@@ -317,7 +317,7 @@ def train_all(save_path=fname.save):
                     "optimizer": optimizer.state_dict(),
                     "args": FLAGS,
                 },
-                save_path,
+                fname.net_dir,
                 None,
             )
             print("===============save best model at epoch: ", epoch)

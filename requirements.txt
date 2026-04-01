@@ -1,4 +1,5 @@
 argparse
+brokenaxes @ git+https://github.com/bendichter/brokenaxes@b875507
 datetime
 filename_templates
 importlib
@@ -11,15 +12,15 @@ numpy
 pandas
 pillow
 plotnine
-scipy
+predify @ git+https://github.com/miladmozafari/predify@7538a68
 scikit-learn
+scipy
 statsmodels
+tensorboard
 torch
 torchvision
 tqdm
 typing
 webdataset
-tensorboard
-yellowbrick
 xarray
-brokenaxes
+yellowbrick
