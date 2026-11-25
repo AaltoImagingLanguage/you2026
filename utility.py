@@ -1,3 +1,18 @@
+"""Shared helpers of the analysis scripts (imported, not run directly).
+
+Model construction and loading: get_model (VGG16 backbone), VGG16_FT (backbone with
+convolutional layers up to pool4 frozen; 02_train_backbone.py), fetch_pmodel,
+get_pmodel (predictive-coding VGG16 with given hyperparameters), load_pnet
+(06_optimize_hyperparameters.py), set_hyperparams, patch_pcoders/compute_C_sqrt
+(Predify PCoders for 2D representations). Training/evaluation: transform (image
+preprocessing), accuracy, AverageMeter(_train), compute_soft_target (soft-label
+distribution over the vocabulary), get_sti_rank (rank of the base word).
+Plotting: plot_rdms_model (S5 Fig C), plot_meg_rdms (S5 Fig A-B), plot_cluster_label
+(cluster outlines on brain maps).
+
+Module-level data: word2idx10k from ../data/dataset/word2idx.pkl (1000-word vocabulary
+-> class index) and stimuli from ../data/dataset/stimuli.csv (non-catch stimuli).
+"""
 import pandas as pd
 import pickle
 import torch
@@ -7,7 +22,7 @@ from collections import OrderedDict
 import importlib
 import matplotlib.pyplot as plt
 import torchvision.models as models
-from Levenshtein import distance as DL
+from Levenshtein import distance as levenshtein
 import torch.nn.functional as F
 import matplotlib.patches as mpatches
 from config import n, category_colors
@@ -29,7 +44,7 @@ import torchvision.transforms as transforms
 with open(fname.word2idx_dir, "rb") as file:
     word2idx10k = pickle.load(file)
 
-stimuli = pd.read_csv(f"{fname.data_dir}/stimuli.csv")
+stimuli = pd.read_csv(f"{fname.data_dir}/dataset/stimuli.csv")
 stimuli = stimuli[stimuli["target"] == "0"]
 
 transform = torchvision.transforms.Compose(
@@ -40,6 +55,24 @@ transform = torchvision.transforms.Compose(
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ]
 )
+
+class AverageMeter_train(object):
+    """Computes and stores the average and current value"""
+
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.val = 0
+        self.avg = 0
+        self.sum = 0
+        self.count = 0
+
+    def update(self, val, n=1):
+        self.val = val / n
+        self.sum += val
+        self.count += n
+        self.avg = self.sum / self.count
 
 
 class AverageMeter(object):
@@ -127,9 +160,7 @@ def accuracy1(output, target, topk=(1,)):
 
 
 def get_model(pretrained=False, ngpus=1, model="cornet_r", trained_root=None):
-
-
-    # Recurrent version of CORnet-Z. Better than CORnet-Z + recurrent but slow
+  
 
     if model.lower() == "vgg16":
         from torchvision.models import vgg16
@@ -145,7 +176,7 @@ def get_model(pretrained=False, ngpus=1, model="cornet_r", trained_root=None):
     if isinstance(model, nn.DataParallel):
         model = model.module  # remove DataParallel
     if ngpus > 0:
-        model = model.cuda()
+        model = model.to(device)  # config `device` = cuda if available, else cpu
     return model
 
 
@@ -171,11 +202,6 @@ def get_layerwise_avg_weights(model):
             layer_avg_weights[name] = param.data.mean().item()
 
     return layer_avg_weights
-
-
-# Example usage:
-# model = YourModel()
-# print(get_layerwise_avg_weights(model))
 
 
 def set_hyperparams(net, hps):
@@ -213,7 +239,7 @@ def get_pmodel(
     if isinstance(net, nn.DataParallel):
         net = net.module
     if backbone_path:
-        checkpoint = torch.load(backbone_path, weights_only=False)
+        checkpoint = torch.load(backbone_path, weights_only=False, map_location=device)
         state_dict = (
             checkpoint["state_dict"] if "state_dict" in checkpoint else checkpoint
         )
@@ -233,14 +259,14 @@ def get_pmodel(
         print(f"Loading weights from {pnet_path}")
         if hasattr(pc_model, "numbre_of_pcoders"):
             for n in range(pc_model.numbre_of_pcoders):
-                checkpoints = torch.load(f"{pnet_path}{n+1}.pth", weights_only=False)
+                checkpoints = torch.load(f"{pnet_path}{n+1}.pth", weights_only=False, map_location=device)
                 checkpoint = checkpoints["pcoderweights"]
                 getattr(pc_model, f"pcoder{n+1}").load_state_dict(checkpoint)
                 # getattr( pc_model,f"pcoder{n+1}").pmodule.load_state_dict({k[len('pmodule.'):]:v for k,v in checkpoint['pcoderweights'].items() if k!="C_sqrt"})
 
         else:
             for n in range(pc_model.number_of_pcoders):
-                checkpoints = torch.load(f"{pnet_path}{n+1}.pth", weights_only=False)
+                checkpoints = torch.load(f"{pnet_path}{n+1}.pth", weights_only=False, map_location=device)
                 checkpoint = checkpoints["pcoderweights"]
                 getattr(pc_model, f"pcoder{n+1}").load_state_dict(checkpoint)
                 # getattr( pc_model,f"pcoder{n+1}").pmodule.load_state_dict({k[len('pmodule.'):]:v for k,v in checkpoint['pcoderweights'].items() if k!="C_sqrt"})
@@ -318,7 +344,8 @@ def load_pnet(
                 # getattr(pc_model,f"pcoder{n+1}").pmodule.load_state_dict({k[len('pmodule.'):]:v for k,v in checkpoint['pcoderweights'].items() if k!="C_sqrt"})
         print("load pnet at epoch: ", checkpoints["epoch"])
         print("load pnet at loss: ", checkpoints["loss"])
-        print("load pnet optimizer: ", checkpoints["optimizer"])
+        # seed checkpoints are saved without optimizer state
+        print("load pnet optimizer: ", checkpoints.get("optimizer", "not saved"))
     if hyperparams is not None:
         set_hyperparams(pc_model, hyperparams)
 
@@ -444,19 +471,18 @@ class VGG16_FT(nn.Module):
 
         # Freeze early layers (if requested)
         if freeze_layers:
-            # Freeze all feature layers except the last few
-            # This example freezes all but the last 4 convolutional layers
+            # freeze the first 10 convolutional layers (parameters 0-19: weight and
+            # bias of conv1_1..conv4_3, i.e. up to pool4); conv5_1-conv5_3 are trained
             for i, param in enumerate(self.features.parameters()):
                 if (
                     i < 20
-                ):  # VGG16 has 13 conv layers (each with weights and biases), vOT from 10th layer 9/13~3/4 (v1/v2/v4/it)
+                ):  # VGG16 has 13 conv layers (each with weights and biases)
                     param.requires_grad = False
 
         # Classifier part (fully connected layers)
         self.avgpool = vgg16.avgpool
 
-        # Replace the classifier for your task
-        # Assuming you need a custom number of output classes
+        # new classifier with num_classes outputs (1000 words)
         self.classifier = nn.Sequential(
             nn.Linear(512 * 7 * 7, 4096),
             nn.ReLU(True),
@@ -483,10 +509,10 @@ class VGG16_FT(nn.Module):
 
 def compute_soft_target(y_word: str, vocab: list, temperature: float = 1):
     """
-    Given a target word, compute a soft label distribution over the vocabulary
-    using Levenshtein similarity.
+    Given a target word, compute a soft label distribution over the vocabulary:
+    exp(-temperature * Levenshtein distance), normalized to sum to 1.
     """
-    sims = [np.exp(-DL(y_word, word) * temperature) for word in vocab]
+    sims = [np.exp(-levenshtein(y_word, word) * temperature) for word in vocab]
     sims = np.array(sims)
     soft_target = sims / sims.sum()  # normalize to make a probability distribution
     return torch.tensor(soft_target, dtype=torch.float32)  # (1000,)
@@ -517,21 +543,6 @@ def soft_label_loss(
     return loss
 
 
-# if __name__ == "__main__":
-# from torchvision.models import vgg16
-# model = "vgg16"
-# model1 = get_model(model=model, pretrained=False)
-# model2 = get_model(model=model, pretrained=True)
-# model3 = get_model(
-#     model=model, trained_root="save/ffbackbone//vgg16_checkpoint.pth.tar"
-# )
-# # model_size = compute_model_size (model)
-# mean_weights1 = get_layerwise_avg_weights(model1)
-# mean_weights2 = get_layerwise_avg_weights(model2)
-# mean_weights3 = get_layerwise_avg_weights(model3)
-# print()
-# model = cornet_z_FT()
-# model = VGG16_FT()
 from scipy.spatial import distance
 import matplotlib.colors as mcolors
 
@@ -851,6 +862,7 @@ def plot_meg_rdms(
     plot_size=2,
     colorbar_label=None,
     title=None,
+    extend="neither",
 ):
     """Plot one or more RDMs.
 
@@ -859,6 +871,9 @@ def plot_meg_rdms(
     rdms : ndarray | list of ndarray
         The RDM or list of RDMs to plot. The RDMs can either be two-dimensional (n_items
         x n_items) matrices or be in condensed form.
+    extend : str
+        Colorbar extension for values outside [vmin, vmax]: "neither", "max",
+        "min" or "both".
     names : str | list of str | None
         For each given RDM, a name to show above it. Defaults to no names.
     items : list of str | None
@@ -933,7 +948,7 @@ def plot_meg_rdms(
                 ax[row, col].set_visible(False)
 
     # Add colorbar with custom label
-    cbar = plt.colorbar(im, ax=ax)
+    cbar = plt.colorbar(im, ax=ax, extend=extend)
     cbar.set_label(
         colorbar_label,
         rotation=270,
@@ -1005,7 +1020,7 @@ def plot_rdms_model(
     for i, (group_data, group_name) in enumerate(
         zip(rdms, ["PCoder 1", "PCoder 2", "PCoder 3"])
     ):
-        data_dict[group_name] = {f"Pair 1": group_data}
+        data_dict[group_name] = {"Pair 1": group_data}
 
     # Plot subplots
     axes = []
@@ -1235,8 +1250,7 @@ def create_labels_adjacency_matrix(labels, src_to):
     for i, label1 in enumerate(labels1):
         for j, label2 in enumerate(labels1):
             if i != j:
-                # Check if any vertices of label1 are adjacent to vertices of label2
-                # (you need to adapt this depending on how you define adjacency)
+                # labels are adjacent if any vertex of label1 is adjacent to a vertex of label2
 
                 label1_vertices = np.in1d(adjacency.row, label1.vertices)
                 label2_vertices = np.in1d(adjacency.col, label2.vertices)
@@ -1302,17 +1316,17 @@ def compute_C_sqrt(self, target):
         cnt = 0
         for repeat in range(10):
             x = self.rep.detach().clone()
-            # x[:,x.shape[1]//2,x.shape[2]//2,x.shape[3]//2] = torch.randint(-10000,10000,(x.shape[0],), device=x.device).float() #original
-            x[:,x.shape[1]//2] = torch.randint(-10000,10000,(x.shape[0],), device=x.device).float() #our modification
+            # x[:,x.shape[1]//2,x.shape[2]//2,x.shape[3]//2] = torch.randint(-10000,10000,(x.shape[0],), device=x.device).float()  # predify (4D)
+            x[:,x.shape[1]//2] = torch.randint(-10000,10000,(x.shape[0],), device=x.device).float()  # 2D version
             x.requires_grad = True
             with torch.enable_grad():
                 xpred = self.pmodule(x)
                 # xloss = nn.functional.mse_loss(xpred, target)
                 # xgrad = torch.autograd.grad(xloss, x, retain_graph=True)[0]
-
+            
             xpred_rand = xpred.detach().clone()
             with torch.no_grad():
-
+                
                 diff = xpred_orig - xpred_rand
 
                 cnt += (xpred_orig != xpred_rand).sum().float() / diff.shape[0]   # divided by the batch size

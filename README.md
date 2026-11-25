@@ -1,132 +1,56 @@
-# Predictive coding narrows the gap between convolutional networks and human brain function in misspelled-word reading
+# Predictive coding narrows the condition-level gap between convolutional networks and human brain function in misspelled-word reading
 
-Jiaxin You, Riitta Salmelin, and Marijn van Vliet (2026). "Predictive coding narrows the gap between convolutional networks and human brain function in misspelled-word reading". 
+This repo contains Python scripts for dataset generation, Predictive coding model training/evaluation, model-brain comparison and figure producing. The predictive-coding components in this work rely on  [Predify](https://github.com/miladmozafari/predify).
 
-This repo contains Python scripts for dataset generation, Predictive coding model training/evaluation, model-brain comparison and figure producing.  The predictive-coding components in this work rely on [Predify (GitHub)](https://github.com/miladmozafari/predify).
+## Data
 
-**Data**
-- Project data (non-personal) are stored on OSF: https://osf.io/8472e
-- After downloading, set `data_dir` in `config.py` to the folder where you extracted the data.
+Project data (non-personal) are stored on OSF: https://osf.io/8472e
 
-**Installation**
+After downloading, set `data_dir` in `config.py` to the folder where you extracted the data.
+
+## Installation
+
 The required Python packages are listed in `requirements.txt`. One way to install them is through pip:
 
-`pip install -r requirements.txt`
-
-**Repository layout**
-- `00_dataset_generation.py` : Prepare image stimuli and dataset for training and validating.
-- `01_train_backbone_model.py` : Train the backbone feedforward CNN model.
-- `01_test_stimuli_backbone.py` : Test the experimental stimuli on the trained backbone model.
-- `02_generate_pred_model.py` : Generate predictive coding model architecture.
-- `03_train_feedback_weights.py` : Train feedback components of predictive coding model.
-- `04_train_pcoder_hps.py` : Hyperparameter optimation for predictive coding model using five-fold cross validation.
-- `05_Fig2b_model_behavior_mean_folds.py` : Produce model behaviorly performance with hyperparameters averaged across folds (Figure 2b).
-- `05_Fig2c-d_model_behavior_median_fold.py` : Produce model behavior with meidan hyperparameters across folds  (Figure 2c-d).
-- `06_meg_rois_rdms.py` / `06_model_rdms.py` : RDM computations for MEG ROIs and model representations.
-- `07_*` : Computate RSA time courses between RDMs of model and parcel representation and plot the results.
-- `08_*` : Linear mapping / ridge mapping from model to parcel representations and plot the results.
-- `config.py` : Central configuration values used by scripts.
-- `pnet/` : Predictive coding model architecture.
-
-
-
-
-
-<!-- Reproducibility notes
-- Configuration files in `config_pnet/` and `config_train_fb/` contain training and model hyperparameters used to reproduce published results.
-- Cross-validation fold assignments are stored in `data/cv_fold_assignments.json`.
-
-Development
-- Use `pnet/` for model implementations. To run or modify model code, edit `pnet/pvgg16v1.py` and other modules in `pnet/` accordingly.
-- Utility helpers are in `utility.py` and `ridge.py` for mapping/ridge regression functionality.
-
-Testing and running on HPC
-- Example session for interactive runs on a cluster:
-
 ```bash
-# activate environment
-## Predictive coding narrows the gap between convolutional networks and human brain function in misspelled-word reading
-
-Jiaxin You, Riitta Salmelin, and Marijn van Vliet (2026).
-
-This repository contains Python scripts for dataset generation, predictive-coding model training and evaluation, model–brain comparisons (RSA/RDM), and figure generation for the project. The predictive-coding components in this work rely on Predify: [Predify (GitHub)](https://github.com/miladmozafari/predify).
-
-**Data**
-- Project data (non-personal) are hosted on OSF: https://osf.io/8472e
-- After downloading, set `data_dir` in `config.py` to the folder where you extracted the data.
-
-**Installation**
-- The required Python packages are listed in `requirements.txt`.
-- Recommended environment (conda):
-
-```bash
-conda create -n you2026 python=3.10 -y
-conda activate you2026
 pip install -r requirements.txt
 ```
 
-**Repository layout**
-- `00_dataset_generation.py` — prepare image stimuli and dataset metadata.
-- `01_train_backbone_model.py` — train the backbone (feedforward) CNN.
-- `01_test_stimuli_backbone.py` — test stimuli preprocessing and backbone behavior.
-- `02_generate_pred_model.py` — build predictive-coding model instances.
-- `03_train_feedback_weights.py` — train feedback components for predictive-coding models.
-- `04_train_pcoder_hps.py` — hyperparameter optimization (PCoder) using cross-validation.
-- `05_Fig2b_model_behavior_mean_folds.py` — produce model behavior (mean across folds) for Figure 2b.
-- `05_Fig2c-d_model_behavior_median_fold.py` — median-fold behavior figures (Figure 2c–d).
-- `06_meg_rois_rdms.py`, `06_model_rdms.py` — compute RDMs for MEG ROIs and model layers.
-- `07_*` — RSA time-course plotting and whole-brain visualization scripts.
-- `08_*` — linear / ridge mapping between model and parcel representations and plotting.
-- `config.py` — central configuration and path settings.
-- `pnet/` — local package implementing model architectures (e.g. predictive-coding wrappers).
+## Main analyses
 
-**Quick usage**
-- Inspect script options (many scripts accept CLI args or read `.toml`/`config.py` files):
+Run all scripts from the repository root. Scripts named after a figure or table (`Fig*`,
+`Tab*`, `S*`) are in `figures_tables/` and produce it from the OSF data. **MEG**: needs the
+participant-level MEG data, which cannot be shared; the outputs of these steps are included
+in the OSF data.
 
-```bash
-python 00_dataset_generation.py --help
-python 01_train_backbone_model.py --help
-```
+| Step | Scripts | Result |
+|---|---|---|
+| 1. Images | `01_make_image_datasets.py` | |
+| 2. Feedforward backbone | `02_train_backbone.py` | |
+| 3. Predictive-coding model | `04_make_pc_model.py`, `05_train_feedback_weights.py` | |
+| 4. Hyperparameters, RL2 + RL3 | `06_optimize_hyperparameters.py --sti_type RL23PW --val_fold k`, once per validation fold k = 0–4. Nested cross-validation (held-out predictions, Fig 3A): also add `--test_fold f` for each test fold f = 0–4, with the next fold as validation fold (f = 4: fold 0) | Table 1 |
+| 5. Human behavior | `Fig2_human_behavior.py` | Fig 2 |
+| 6. Model behavior | `12_eval_runs_behavior.py --run orig` → `Fig3A_heldout_accuracy.py`; `Fig3BC_model_behavior.py` → `Fig3_compose.py` | Fig 3 |
+| 7. Condition-wise RSA | `16_model_rdms.py`, `17_meg_trial_patterns.py` (**MEG**) → `18_rsa_parcels.py` → `19_rsa_wholecortex.py`; `21_rsa_controls.py` (cortex average) → `Fig5_Fig6_compose.py` | Figs 5, 6 |
+| 8. Effect sizes | `Tab2_effect_sizes_predefined_windows.py` | Table 2 |
+| 9. Ridge regression | `28_ridge_grand_average.py` (**MEG**) → `Fig7_ridge.py` | Fig 7 |
 
-- Example pipeline (adjust to your cluster and paths):
+Fig 1 is a schematic, and Fig 4 is reproduced from earlier work.
 
-```bash
-python 00_dataset_generation.py
-python 01_train_backbone_model.py
-python 02_generate_pred_model.py
-python 05_Fig2b_model_behavior_mean_folds.py
-```
+## Supporting analyses
 
-**Reproducibility notes**
-- Configuration files in `config_pnet/` and `config_train_fb/` record model and training hyperparameters used for the experiments.
-- Cross-validation fold assignments are in `data/cv_fold_assignments.json`.
-
-**Development**
-- Implementations for the predictive-coding/backbone models live under `pnet/`. Edit `pnet/pvgg16v1.py` and related modules to modify model code.
-- Helpers for mapping and ridge regression are in `utility.py` and `ridge.py`.
-
-**Running on HPC / Example session**
-
-```bash
-# activate environment
-conda activate you2026
-# run training or evaluation scripts (adapt GPU/SLURM options as needed)
-python 01_train_backbone_model.py
-```
-
-**Contributing**
-- Fork the repo and open a pull request. When adding features, include a short runnable example or test where feasible.
-
-**License**
-- No license file is included in this repository. Confirm reuse terms with the project owner before redistribution.
-
-**Contact**
-- For questions about reproducing results or the code, contact the repository owner or project lead listed in the repository metadata.
-
----
-
-If you'd like, I can:
-- add a short `examples/` folder with an end-to-end demo, or
-- expand the README with CLI examples for the main scripts and common argument values.
-
-Note: I added a markdown link to Predify at the top. If you prefer a different URL (for example the Predify project page or a documentation site), tell me the preferred link and I will update it.
+| Analysis | Scripts | Result |
+|---|---|---|
+| Human catch-trial reaction times | `11_human_rt_stats.py` → `S1Tab_human_rt.py` | S1 Table |
+| Update-term contributions and prediction errors | `15_update_terms_dynamics.py` | S1 Fig |
+| Retraining with four random seeds | `10_train_backbone_seeds.py`, then `05_`–`07_` with `--out_tag _seedN`; `12_`, `13_` → `S2Tab_seeds.py` | S2 Table, S2 Fig |
+| One-hot training control | `02_train_backbone.py --target onehot`, `03_test_backbone_on_stimuli.py` → `S3Tab_soft_vs_onehot.py` | S3 Table |
+| RNN and GRU controls and PCoder ablations | `07_`–`09_`, `14_controls_ablations_behavior.py`, `20_`, `21_rsa_controls.py`; specifications in `tables/S6_Tab.tex` | S3, S12 Figs, S6 Table |
+| Hyperparameter perturbation | `31_hp_perturbation.py` → `32_hp_perturbation_rsa.py` → `S4Fig_S11Fig_hp_perturbation.py` | S4, S11 Figs |
+| Effect sizes in vOT and ST; correction families | `22_effect_sizes_clusters.py` → `S4Tab_effect_sizes_vOT_ST.py`, `S5Tab_correction_families.py` | S4, S5 Tables |
+| MEG and model RDMs | `16_model_rdms.py`, `S5Fig_meg_rdms.py` → `make_supporting_information.py` (composite) | S5 Fig |
+| Whole-cortex RSA of PCoders 1 and 2 | `19_rsa_wholecortex.py` | S7 Fig |
+| Condition-label baselines, severity-partialled RSA, noise ceiling, bootstrap and cross-validated RDMs | `23_`–`25_` → `S8FigC_severity_partial_maps.py`, `S6Fig_S8Fig_rsa_baselines.py`, `S9Fig_reliability.py` | S6, S8, S9 Figs |
+| RSA over recurrent timesteps | `30_dynamics_rsa.py` → `S10Fig_rsa_timesteps.py` | S10 Fig |
+| Stimulus-level RSA and RDMs | `26_meg_vertex_time_courses.py` (**MEG**) → `27_stimulus_rsa_partial.py --combine_rois`, `S14Fig_stimulus_rdms.py` | S13, S14 Figs |
+| Participant-level ridge regression | `29_ridge_participant_level.py` → `S15Fig_ridge_participant_level.py` | S15 Fig |

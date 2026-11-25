@@ -1,0 +1,29 @@
+\documentclass[9pt]{extarticle}
+\usepackage[margin=2cm,a4paper]{geometry}
+\usepackage{booktabs,array,amsmath}
+\pagestyle{empty}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\begin{document}
+
+\noindent\begin{tabular}{L{3.4cm}L{3.3cm}L{3.3cm}L{4.0cm}}
+\toprule
+ & RNN control & GRU control & Predictive-coding model \\
+\midrule
+Hidden dimensions & \multicolumn{2}{L{6.6cm}}{128 units at each of the three layers (projections layer$\to$128$\to$layer)} & none (feedback mappings only) \\
+\midrule
+\multicolumn{4}{l}{\textit{Parameter counts (added to the feedforward backbone)}} \\
+Generative mappings & 123,666,944 & 123,666,944 & 123,666,944 \\
+Recurrent cells & 99,072 & 297,216 & -- \\
+Projections and mixing gates & 2,362,731 & 2,362,731 & -- \\
+\textbf{Total} & \textbf{126,128,747} & \textbf{126,326,891} & \textbf{123,666,944} \\
+Relative to the predictive-coding model & +2.0\% & +2.2\% & -- \\
+\midrule
+Objective & \multicolumn{3}{L{10.6cm}}{mean squared error between each layer's prediction and the layer below, summed over the three layers} \\
+Training data & \multicolumn{3}{L{10.6cm}}{real-word training images; feedforward backbone frozen} \\
+Training epochs & \multicolumn{3}{L{10.6cm}}{maximum 200} \\
+Stopping rule & \multicolumn{2}{L{6.6cm}}{stop after 10 epochs without a decrease in validation error of more than 0.001} & stop after 10 epochs without a decrease in validation error of more than 0.05 \\
+Optimizer & \multicolumn{2}{L{6.6cm}}{Adam, learning rate $10^{-3}$, weight decay $5\times10^{-4}$} & SGD without momentum, learning rate $10^{-4}$, weight decay $5\times10^{-4}$ \\
+Optimization budget & \multicolumn{2}{L{6.6cm}}{6,250 gradient updates per epoch} & 4,000 gradient updates per epoch \\
+\bottomrule
+\end{tabular}
+\end{document}

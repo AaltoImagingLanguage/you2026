@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""Cross-validated ridge regression used by the ridge analyses (Fig 7, S4 Table,
+S15 Fig; 28_ridge_grand_average.py and 29_ridge_participant_level.py).
+
+Ridge(...).bv_linear(x, y) returns the K-fold cross-validated score (Pearson
+correlation between predicted and observed responses; median over targets for
+multi-target y) for every fold. Pipeline per fold: StandardScaler, optional PCA,
+RidgeCV (regularization chosen within the training set). With n_perm = 1000 the
+rows of x are permuted 1000 times (same folds) to give a null distribution of
+shape (n_splits, 1000). Library module; not run directly.
+"""
 from __future__ import annotations
 import numpy as np
 import random
@@ -39,7 +49,8 @@ correlation_scorer = make_scorer(correlation_score, greater_is_better=True)
 
 class Ridge:
     """
-    Supports two modes: n_perm=0 (no permutations) or n_perm=1000 (permutation testing)
+    Cross-validated ridge regression. Two modes: n_perm=0 (no permutations) or
+    n_perm=1000 (permutation testing).
     """
 
     def __init__(
@@ -53,8 +64,6 @@ class Ridge:
         n_perm: int = 0,
     ):
         """
-        Initialize OptimizedMDPC
-
         Parameters:
         -----------
         n_splits : int

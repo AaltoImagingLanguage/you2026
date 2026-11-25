@@ -1,26 +1,36 @@
-argparse
-brokenaxes @ git+https://github.com/bendichter/brokenaxes@b875507
-datetime
-filename_templates
-importlib
-joblib
-Levenshtein
-matplotlib
-mne
-mne_rsa
-numpy
-pandas
-pillow
-plotnine
-predify @ git+https://github.com/miladmozafari/predify@7538a68
-scikit-learn
-scipy
-statsmodels
-tensorboard
-torch
-torchvision
-tqdm
-typing
-webdataset
-xarray
-yellowbrick
+# Python 3.12. Exact versions of the environment in which the statistics, tables and
+# figures were reproduced from the data release. Install PyTorch for your CUDA version
+# first (https://pytorch.org), e.g.
+#   pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu121
+torch==2.5.1
+torchvision==0.20.1
+numpy==2.3.4
+scipy==1.17.1
+pandas==3.0.1
+xarray==2026.2.0
+netCDF4==1.7.4
+scikit-learn==1.8.0
+statsmodels==0.14.6
+mne==1.11.0
+mne-rsa==1.0
+nibabel==5.4.2
+pyvista==0.47.1
+pyvistaqt==0.11.3
+vtk==9.6.1
+ipywidgets==8.1.9        # off-screen rendering of the brain maps (MNE notebook backend)
+ipyevents==2.0.4
+webdataset==1.0.2
+pillow==12.1.1
+Levenshtein==0.27.3
+joblib==1.5.3
+tqdm==4.67.3
+tensorboard==2.20.0
+matplotlib==3.10.8
+seaborn==0.13.2
+plotnine==0.15.3
+brokenaxes==0.6.2
+yellowbrick==1.5
+filename-templates==1.3
+toml==0.10.2
+# predictive-coding modules (Predify), pinned to the commit used
+predify @ git+https://github.com/miladmozafari/predify.git@7538a683a383c85dd5909e7aea2b868e931f39ff
